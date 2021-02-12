@@ -469,11 +469,11 @@ def eval_gan(dataset_dir, batch_size):
         real_images_A = data["A"].to(device)
         real_images_B = data["B"].to(device)
 
-        # Generate output
+        # Генерация на тестовой выборке
         fake_image_A = 0.5 * (netG_B2A(real_images_B).data + 1.0)
         fake_image_B = 0.5 * (netG_A2B(real_images_A).data + 1.0)
 
-        # Save image files
+        # Сохранение тестовых изображений
         utils.save_image(fake_image_A.detach(), f"{out}/cezanne2photo/A/{i + 1:04d}.jpg", normalize=True)
         utils.save_image(fake_image_B.detach(), f"{out}/cezanne2photo/B/{i + 1:04d}.jpg", normalize=True)
 
