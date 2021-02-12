@@ -14,7 +14,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-ncfl = 64          # Число каналов первого слоя
+ncfl = 64          # Число каналов первого слоя (number of channels of the first layer)
 img_width = 256    # Ширина входного изображения 256
 img_height = 256   # Высота входного изображения
 RESCALE_SIZE = 256 # Размер рескейла в аугментациях
@@ -64,7 +64,7 @@ class ImageDataset(Dataset):
         return max(len(self.files_A), len(self.files_B))
 
 
-"""### CycleGAN: Generator, Discriminator"""
+"""CycleGAN: Generator, Discriminator"""
 
 
 class Generator(nn.Module):
@@ -175,9 +175,9 @@ class Discriminator(nn.Module):
         return output
 
 
-"""### Упрощённое вычисление ошибки дискриминатора"""
+"""Упрощённое вычисление ошибки дискриминатора"""
 
-# Создадим "резервуар" для заполнения его фейковыми изоюражениями с последующей
+# Создадим "резервуар" для заполнения его фейковыми изображениями с последующей
 # случайной заменой старого на новое
 
 class ImagePool:
@@ -413,10 +413,10 @@ def train_gan(dataset_dir, epochs, batch_size, lr=2e-4):
         torch.save(netD_B.state_dict(), f"{out}/weights/netD_B_epoch_{epoch}.pth")
 
     # Финальное сохранение весов сетей
-    torch.save(netG_A2B.state_dict(), f"{out}weights/netG_A2B.pth")
-    torch.save(netG_B2A.state_dict(), f"{out}weights/netG_B2A.pth")
-    torch.save(netD_A.state_dict(), f"{out}weights/netD_A.pth")
-    torch.save(netD_B.state_dict(), f"{out}weights/netD_B.pth")
+    torch.save(netG_A2B.state_dict(), f"{out}/weights/netG_A2B.pth")
+    torch.save(netG_B2A.state_dict(), f"{out}/weights/netG_B2A.pth")
+    torch.save(netD_A.state_dict(), f"{out}/weights/netD_A.pth")
+    torch.save(netD_B.state_dict(), f"{out}/weights/netD_B.pth")
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -454,9 +454,9 @@ def eval_gan(dataset_dir, batch_size):
 
     # Загрузка весов обученной в train_gan модели
     netG_A2B.load_state_dict(
-        torch.load(os.path.join("/content/drive/MyDrive/outputs/weights", "cezanne2photo", "netG_A2B.pth")))
+        torch.load(os.path.join("/content/drive/MyDrive/outputs/weights", "netG_A2B.pth")))
     netG_B2A.load_state_dict(
-        torch.load(os.path.join("/content/drive/MyDrive/outputs/weights", "cezanne2photo", "netG_B2A.pth")))
+        torch.load(os.path.join("/content/drive/MyDrive/outputs/weights", "netG_B2A.pth")))
 
     # Переключение модели в режим eval()
     netG_A2B.eval()
