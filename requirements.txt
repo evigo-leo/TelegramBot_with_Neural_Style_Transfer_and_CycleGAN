@@ -1,3 +1,4 @@
+python3-dotenv
 aiogram==2.11.2
 aiohttp==3.7.3
 async-timeout==3.0.1
@@ -11,9 +12,8 @@ pytz==2020.5
 typing-extensions==3.7.4.3
 yarl==1.6.3
 
-torch==1.7.1
-Pillow==8.1.0
-torchvision==0.2.2.post3
-tqdm==4.56.0
 
-python-dotenv
+torch==1.7.1+cpu
+Pillow==8.1.0
+torchvision==0.8.2+cpu
+tqdm==4.56.0
