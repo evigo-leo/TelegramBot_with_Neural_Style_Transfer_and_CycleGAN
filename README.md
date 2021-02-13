@@ -1,5 +1,5 @@
 # TelegramBot_with_Neural_Style_Transfer_&_CycleGAN
-PyTorch implementation of telegram bot of NST &amp; CycleGAN
+PyTorch and aiogram implementation of telegram bot of NST &amp; CycleGAN
 
 Описание файлов проекта.
 1. Weights - папка с предобученными гиперпараметрами на датасете с картинами художника Paul Cézanne.
