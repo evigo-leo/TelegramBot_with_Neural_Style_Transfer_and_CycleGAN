@@ -14,7 +14,7 @@ from torchvision.transforms import transforms
 
 from config import TOKEN
 from cyclegan import Generator, device
-from menu import keyboard, cancel_board
+from keyboards import menu, cancel_button, continue_button1, continue_button2
 from nst import run_style_transfer, cnn, cnn_normalization_mean, cnn_normalization_std
 from states import PhotoTransform
 
@@ -48,7 +48,7 @@ async def process_start_command(message: types.Message):
     """
     if message:
         await message.answer('Выбери фичу и кидай пикчу!😊\n'
-                             'Подробности по команде /info\n', reply_markup=keyboard)
+                             'Подробности по команде /info\n', reply_markup=menu)
 
 
 @dp.message_handler(commands=['info'])
@@ -67,12 +67,16 @@ async def process_help_command(message: types.Message):
 """ РАБРОТА С ИНЛАЙН-КЛАВИАТУРОЙ"""
 
 # Хендлер CallbackQuery для работы с инлайн-клавиатурами/кнопками
-@dp.callback_query_handler(lambda c: c.data == 'b1' or c.data == 'b2')
+@dp.callback_query_handler(lambda c: c.data[0] == 'b')     # Фильтруем попадание по 1-му символу из 3-х callback_data
 async def process_callback_keyboard(callback_query: types.CallbackQuery):
-    code = callback_query.data[-1]
-    if code == '1':  # отработка кнопки под NST
-        await bot.answer_callback_query(callback_query.id, text='Режим CUSTOM активирован!✅', show_alert=True)
-        await bot.send_message(callback_query.from_user.id, 'Жду контент!', reply_markup=cancel_board)
+
+    mode_code = callback_query.data[1]                # 2й символ определяет режим
+    continuation_mode = callback_query.data[-1]       # 3й - продолжить в этом режиме
+
+    if mode_code == '1':  # отработка кнопки под NST
+        if continuation_mode == '0':
+            await bot.answer_callback_query(callback_query.id, text='Режим CUSTOM активирован!✅', show_alert=True)
+        await bot.send_message(callback_query.from_user.id, 'Жду контент!', reply_markup=cancel_button)
         await PhotoTransform.PT1.set()  # Устанавливаем 1й стейт машины состояний
 
         # Этот хендлер действует, если вдруг передумали использовать один режим, а хотим другой
@@ -81,11 +85,12 @@ async def process_callback_keyboard(callback_query: types.CallbackQuery):
             await callback_query.answer('Режим CUSTOM отменён!❌', show_alert=True)
             await callback_query.message.edit_reply_markup()
             await state.reset_state()  # сбрасываем стейт МС в случае отмены
-            await bot.send_message(callback_query.from_user.id, 'Для возврата в меню команда /start')
+            await bot.send_message(callback_query.from_user.id, 'Меню: /start')
 
     else:  # отработка кнопки под CycleGAN
-        await bot.answer_callback_query(callback_query.id, text='Режим Paul Cézanne активирован!✅', show_alert=True)
-        await bot.send_message(callback_query.from_user.id, 'Закидывай! Сейчас сделаю всё по красоте!', reply_markup=cancel_board)
+        if continuation_mode == '0':
+            await bot.answer_callback_query(callback_query.id, text='Режим Paul Cézanne активирован!✅', show_alert=True)
+        await bot.send_message(callback_query.from_user.id, 'Закидывай! Сейчас сделаю всё по красоте!', reply_markup=cancel_button)
         state = dp.current_state(user=callback_query.from_user.id)
         await state.set_state('GAN mode')
 
@@ -95,14 +100,14 @@ async def process_callback_keyboard(callback_query: types.CallbackQuery):
             await callback_query.answer('Режим Paul Cézanne отменён!❌', show_alert=True)
             await callback_query.message.edit_reply_markup()
             await state.reset_state()
-            await bot.send_message(callback_query.from_user.id, 'Для возврата в меню команда /start')
+            await bot.send_message(callback_query.from_user.id, 'Меню: /start')
 
 
 # код для работы через / (не инлайн-кнопки)
 """
 @dp.message_handler(commands='NST')
 async def get_nst(message: types.Message):
-    await message.answer('Жду контент!', reply_markup=cancel_board)
+    await message.answer('Жду контент!', reply_markup=cancel_button)
     await PhotoTransform.PT1.set()
 
     @dp.callback_query_handler(text='cancel', state=PhotoTransform.PT1)
@@ -115,7 +120,7 @@ async def get_nst(message: types.Message):
 
 @dp.message_handler(commands='CycleGAN')
 async def get_cyclegan(message: types.Message):
-    await message.answer('Закидывай! Сейчас сделаю всё по красоте', reply_markup=cancel_board)
+    await message.answer('Закидывай! Сейчас сделаю всё по красоте', reply_markup=cancel_button)
     state = dp.current_state(user=message.from_user.id)
     await state.set_state('GAN mode')
 
@@ -151,7 +156,7 @@ async def get_photo_or_doc1(message, state: FSMContext):
     imsize = (content_img.size(2), content_img.size(3))
     await state.update_data(size=imsize)
     await state.update_data(pic=content_img)
-    await message.answer('Теперь стиль...', reply_markup=cancel_board)
+    await message.answer('Теперь стиль...', reply_markup=cancel_button)
     await PhotoTransform.next()
 
     # Хендлер под кнопку "Отмена" Если передумали использовать NST на этапе загрузки стиля
@@ -160,7 +165,7 @@ async def get_photo_or_doc1(message, state: FSMContext):
         await callback_query.answer('Режим CUSTOM отменён!❌', show_alert=True)
         await callback_query.message.edit_reply_markup()
         await state.reset_state()
-        await bot.send_message(callback_query.from_user.id, 'Для возврата в меню команда /start')
+        await bot.send_message(callback_query.from_user.id, 'Меню: /start')
 
 
 @dp.message_handler(content_types=types.ContentTypes.DOCUMENT | types.ContentTypes.PHOTO,
@@ -187,12 +192,12 @@ async def get_photo_or_doc2(message, state: FSMContext):
 
     # Исполнение кода с нейросетью NST
     output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-                                content_img, style_img, input_img, num_steps=200)
+                               content_img, style_img, input_img, num_steps=200)
 
     output_1 = output.to('cpu').squeeze().detach()
     pic = transforms.ToPILImage()(output_1)  # Тензор -> фото
-    await return_image(message, pic, 'Вуаля! свершилось!🥳🎉\n'
-                                     'Для возврата в меню команда /start.')
+    await return_nst_image(message, pic, 'Вуаля! свершилось!🥳🎉\n'
+                                     'Меню: /start.')
     await state.finish()  # Обнуление стостояний МС
 
 
@@ -220,26 +225,34 @@ async def get_photo_or_doc3(message, state: FSMContext):
     fake_img = 0.5 * (tensor_img.data + 1.0).detach()
     img = transforms.ToPILImage(mode='RGB')(fake_img[0])
 
-    await return_image(message, img, "Вуаля! Свершилось!🥳🎉\n"
-                                     "Для возврата в меню команда /start.")
+    await return_cyclegan_image(message, img, "Вуаля! Свершилось!🥳🎉\n"
+                                     "Меню: /start.")
     await state.reset_state()
 
 
-""" ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ"""
+"""ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ"""
 
 
 # Возврат ботом готовой фотографии в ответ
-async def return_image(message: types.Message, image: Image, text: str):
+async def return_nst_image(message: types.Message, image: Image, text: str):
     bytes = io.BytesIO()
     bytes.name = 'image.jpeg'
     image.save(bytes, 'JPEG')
     bytes.seek(0)
-    await message.reply_photo(bytes, caption=text)
+    await message.reply_photo(bytes, caption=text, reply_markup=continue_button1)   #
+
+async def return_cyclegan_image(message: types.Message, image: Image, text: str):
+    bytes = io.BytesIO()
+    bytes.name = 'image.jpeg'
+    image.save(bytes, 'JPEG')
+    bytes.seek(0)
+    await message.reply_photo(bytes, caption=text, reply_markup=continue_button2)
+
 
 
 # Сообщение об ожидании выполнения задачи
 async def waiting(message: types.Message):
-    await message.answer("Процесс пошел, дело времени!")
+    await message.answer("Процесс пошел, дело времени!🕑")
 
 
 # Обработа всех команд и сообщений, неизвестных боту
