@@ -79,6 +79,20 @@ async def process_callback_keyboard(callback_query: types.CallbackQuery):
         await bot.send_message(callback_query.from_user.id, 'Жду контент!', reply_markup=cancel_button)
         await PhotoTransform.PT1.set()  # Устанавливаем 1й стейт машины состояний
 
+
+        # Исключение любых типов данных в этом состоянии кроме фото и док
+        @dp.message_handler(content_types=ContentType.ANY ^ (ContentType.PHOTO | ContentType.DOCUMENT))
+        async def unknown_message(message: types.Message):
+            await message.reply('Надо завершить ❌ или продолжить')
+
+
+        # Исключение любых типов данных в этом состоянии кроме фото и док
+        @dp.message_handler(content_types=['text', 'video', 'sticker', 'audio', 'voice', 'unknown'],
+                            state=PhotoTransform.PT1)
+        async def incorrect_content(message: types.Message):
+            await message.reply('Надо завершить ❌ или продолжить')
+
+
         # Этот хендлер действует, если вдруг передумали использовать один режим, а хотим другой
         @dp.callback_query_handler(text='cancel', state=PhotoTransform.PT1)
         async def cancel(callback_query: types.CallbackQuery, state: FSMContext):
@@ -87,12 +101,22 @@ async def process_callback_keyboard(callback_query: types.CallbackQuery):
             await state.reset_state()  # сбрасываем стейт МС в случае отмены
             await bot.send_message(callback_query.from_user.id, 'Меню: /start')
 
-    else:  # отработка кнопки под CycleGAN
+
+    # отработка кнопки под CycleGAN
+    else:
         if continuation_mode == '0':
             await bot.answer_callback_query(callback_query.id, text='Режим Paul Cézanne активирован!✅', show_alert=True)
         await bot.send_message(callback_query.from_user.id, 'Закидывай! Сейчас сделаю всё по красоте!', reply_markup=cancel_button)
         state = dp.current_state(user=callback_query.from_user.id)
         await state.set_state('GAN mode')
+
+
+        # Исключение любых типов данных в этом состоянии кроме фото и док
+        @dp.message_handler(content_types=['text', 'video', 'sticker', 'audio', 'voice', 'unknown'],
+                            state='GAN mode')
+        async def incorrect_content(message: types.Message):
+            await message.reply('Надо завершить ❌ или продолжить')
+
 
         # в случае отмены CycleGAN
         @dp.callback_query_handler(text='cancel', state='GAN mode')
@@ -143,13 +167,16 @@ async def get_photo_or_doc1(message, state: FSMContext):
     else:
         ref = await message.photo[-1].get_url()
 
+
     async with aiohttp.ClientSession() as cs:
         async with cs.get(ref) as reaction:
             img = Image.open(io.BytesIO(await reaction.read()))  # Изображение в бинарном потоке
 
+
     if img.width * img.height > 256 * 256:  # преобразование входного изображения под 256*256
         ratio = sqrt(img.width * img.height / (256 * 256))  # c сохранением пропорции
         img = img.resize((round(img.width / ratio), round(img.height / ratio)), Image.BICUBIC)
+
 
     trans = transforms.ToTensor()
     content_img = trans(img).unsqueeze(0)  # фото -> тензор [1, 3, 256, 256]
@@ -158,6 +185,14 @@ async def get_photo_or_doc1(message, state: FSMContext):
     await state.update_data(pic=content_img)
     await message.answer('Теперь стиль...', reply_markup=cancel_button)
     await PhotoTransform.next()
+
+
+    # Исключение любых типов данных в этом состоянии кроме фото и док
+    @dp.message_handler(content_types=['text', 'video', 'sticker', 'audio', 'voice', 'unknown'],
+                        state=PhotoTransform.PT1)
+    async def incorrect_content(message: types.Message):
+        await message.reply('Надо завершить ❌ или продолжить')
+
 
     # Хендлер под кнопку "Отмена" Если передумали использовать NST на этапе загрузки стиля
     @dp.callback_query_handler(text='cancel', state=PhotoTransform.PT2)
@@ -176,9 +211,11 @@ async def get_photo_or_doc2(message, state: FSMContext):
     else:
         ref = await message.photo[-1].get_url()
 
+
     async with aiohttp.ClientSession() as cs:
         async with cs.get(ref) as reaction:
             img = Image.open(io.BytesIO(await reaction.read()))
+
 
     data = await state.get_data()
     content_img = data.get('pic')
@@ -210,13 +247,16 @@ async def get_photo_or_doc3(message, state: FSMContext):
     else:
         ref = await message.photo[-1].get_url()
 
+
     async with aiohttp.ClientSession() as cs:
         async with cs.get(ref) as reaction:
             img = Image.open(io.BytesIO(await reaction.read()))
 
+
     if img.width * img.height > 256 * 256:
         ratio = sqrt(img.width * img.height / (256 * 256))
         img = img.resize((round(img.width / ratio), round(img.height / ratio)), Image.BICUBIC)
+
 
     await waiting(message)
     trans = transforms.ToTensor()
@@ -239,7 +279,8 @@ async def return_nst_image(message: types.Message, image: Image, text: str):
     bytes.name = 'image.jpeg'
     image.save(bytes, 'JPEG')
     bytes.seek(0)
-    await message.reply_photo(bytes, caption=text, reply_markup=continue_button1)   #
+    await message.reply_photo(bytes, caption=text, reply_markup=continue_button1)
+
 
 async def return_cyclegan_image(message: types.Message, image: Image, text: str):
     bytes = io.BytesIO()
@@ -249,7 +290,6 @@ async def return_cyclegan_image(message: types.Message, image: Image, text: str)
     await message.reply_photo(bytes, caption=text, reply_markup=continue_button2)
 
 
-
 # Сообщение об ожидании выполнения задачи
 async def waiting(message: types.Message):
     await message.answer("Процесс пошел, дело времени!🕑")
@@ -257,9 +297,9 @@ async def waiting(message: types.Message):
 
 # Обработа всех команд и сообщений, неизвестных боту
 @dp.message_handler(content_types=ContentType.ANY)
-async def unknown_message(msg: types.Message):
+async def unknown_message(message: types.Message):
     message_text = text("Друже, я не розумiю, що це🤷‍♂️.\nДивись тут ➡️ /info")
-    await msg.reply(message_text)
+    await message.reply(message_text)
 
 
 # Запуск бота
