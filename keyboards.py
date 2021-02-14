@@ -36,10 +36,10 @@ button_3 = InlineKeyboardButton('Отмена❌', callback_data='cancel')
 cancel_button = InlineKeyboardMarkup().insert(button_3)
 
 # Продолжить
-button_4 = InlineKeyboardButton('Продолжить', callback_data='b11') #['b11' or 'b21']
+button_4 = InlineKeyboardButton('Продолжить', callback_data='b11')
 continue_button1 = InlineKeyboardMarkup().add(button_4)
 
-button_5 = InlineKeyboardButton('Продолжить', callback_data='b21') #['b11' or 'b21']
+button_5 = InlineKeyboardButton('Продолжить', callback_data='b21')
 continue_button2 = InlineKeyboardMarkup().add(button_5)
 
 """
